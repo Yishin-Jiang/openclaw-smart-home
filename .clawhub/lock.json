@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "skills": {
+    "home-assistant-skill": {
+      "version": "2.1.0",
+      "installedAt": 1785430949789,
+      "registry": "https://clawhub.ai",
+      "ownerHandle": "nj070574-gif",
+      "artifact": {
+        "kind": "archive",
+        "sha256": "974e62d586ce3ade96f257ba78c18cf0838337fb9f551c248c7827a0f55693f5",
+        "integrity": "sha256-l05i1YbOOt6W8le6eMGM8IODN/ufVRwkjHgnoPVWk/U="
+      },
+      "skillFile": {
+        "path": "SKILL.md",
+        "sha256": "fccfd74f8b4780a1ba50c422feb2f6a13cb7528cde8912636d314a4f0c40ead1"
+      },
+      "verification": {
+        "schema": "clawhub.skill.verify.v1",
+        "ok": false,
+        "decision": "fail",
+        "reasons": [
+          "security.status_not_clean"
+        ],
+        "card": {
+          "available": true,
+          "path": "skill-card.md",
+          "url": "https://wry-manatee-359.convex.site/api/v1/skills/home-assistant-skill/card?ownerHandle=nj070574-gif&version=2.1.0",
+          "sha256": "f0d1c0e9f501a1f47404eb972ed11560772151d75a136b9e49190f83c08b24de",
+          "size": 2620,
+          "contentType": "text/markdown; charset=utf-8"
+        },
+        "artifact": {
+          "sourceFingerprint": "82ec99a367a814f8db49898b18eed00dde490d0abd90de1dcedb9067f3355548",
+          "bundleFingerprints": [
+            "5b2234e834fee9f399c487233648ae7e4d70af57d623b7332b21da2bace63670"
+          ],
+          "files": [
+            {
+              "path": "SKILL.md",
+              "size": 4672,
+              "sha256": "fccfd74f8b4780a1ba50c422feb2f6a13cb7528cde8912636d314a4f0c40ead1",
+              "contentType": "text/markdown"
+            },
+            {
+              "path": "home_assistant.json",
+              "size": 14242,
+              "sha256": "71e6b866e5d2878b88f669ebd51fab9f4195fd04a87a341a7be01d4f595fa7c4",
+              "contentType": "application/json"
+            }
+          ]
+        },
+        "provenance": {
+          "source": "unavailable",
+          "reason": "No server-resolved GitHub import provenance is stored for this version."
+        },
+        "security": {
+          "status": "suspicious",
+          "passed": false,
+          "rawStatus": "suspicious",
+          "verdict": "suspicious",
+          "confidence": "high",
+          "summary": "This Home Assistant skill is coherent, but it gives an agent broad physical smart-home control with overly broad triggers and limited built-in safety scoping.",
+          "model": "gpt-5.5",
+          "checkedAt": 1779943733517,
+          "signals": {
+            "staticScan": {
+              "status": "clean",
+              "rawStatus": "clean",
+              "reasonCodes": [],
+              "summary": "No suspicious patterns detected.",
+              "engineVersion": "v2.4.5",
+              "checkedAt": 1777527465921
+            },
+            "virusTotal": {
+              "status": "clean",
+              "rawStatus": "clean",
+              "verdict": null,
+              "analysis": null,
+              "source": "engines",
+              "scanner": null,
+              "engineStats": {
+                "harmless": 0,
+                "malicious": 0,
+                "suspicious": 0,
+                "undetected": 63
+              },
+              "checkedAt": 1780090543198
+            },
+            "skillSpector": {
+              "status": "suspicious",
+              "rawStatus": "suspicious",
+              "score": 55,
+              "severity": "HIGH",
+              "recommendation": "DO_NOT_INSTALL",
+              "issueCount": 4,
+              "scannerVersion": "2.0.0",
+              "summary": null,
+              "error": null,
+              "checkedAt": 1779943712114
+            },
+            "dependencyRegistry": null
+          }
+        },
+        "signature": {
+          "status": "unsigned"
+        }
+      }
+    }
+  }
+}
