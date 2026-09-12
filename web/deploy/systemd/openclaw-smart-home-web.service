@@ -1,0 +1,20 @@
+[Unit]
+Description=OpenClaw Smart Home Web
+After=network-online.target openclaw-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.openclaw/workspace/web
+EnvironmentFile=%h/.config/openclaw-smart-home/web.env
+EnvironmentFile=%h/.config/openclaw-smart-home/security.env
+ExecStart=/usr/bin/node server/index.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+UMask=0077
+
+[Install]
+WantedBy=default.target
