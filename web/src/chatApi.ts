@@ -18,6 +18,14 @@ export interface ChatMessage {
   attachments?: ChatAttachment[]
 }
 
+export interface MemoryCandidate {
+  id: string
+  statement: string
+  category: 'lighting' | 'energy' | 'notification' | 'communication' | 'general'
+  status: 'pending' | 'active' | 'inactive'
+  createdAt: string
+}
+
 export interface FlowEvent {
   id: string
   step: string
@@ -37,6 +45,7 @@ interface StreamCallbacks {
   onDelta: (text: string) => void
   onFlow: (event: FlowEvent) => void
   onDone: (message: ChatMessage) => void
+  onMemoryCandidate?: (preference: MemoryCandidate) => void
 }
 
 const sessionStorageKey = 'openclaw-smart-home-session'
@@ -84,6 +93,7 @@ function dispatchSseBlock(block: string, callbacks: StreamCallbacks) {
   if (eventName === 'delta') callbacks.onDelta(payload.text || '')
   if (eventName === 'flow') callbacks.onFlow(payload)
   if (eventName === 'done') callbacks.onDone(payload.message)
+  if (eventName === 'memory_candidate') callbacks.onMemoryCandidate?.(payload.preference)
   if (eventName === 'error') throw new Error(payload.error || 'OpenClaw 執行失敗')
 }
 

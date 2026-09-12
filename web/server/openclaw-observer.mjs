@@ -36,11 +36,12 @@ function resultSummary(name, result) {
   return result.failed ? `${label} 執行失敗` : `${label} 執行完成`
 }
 
-export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, emit, onSnapshot }) {
+export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, emit, onSnapshot, requireAttachment = false, requireVision = false }) {
   const seenMessages = new Set()
   const toolCalls = new Map()
   const state = {
     contextSeen: false,
+    contextFailed: false,
     actionSeen: false,
     verifySeen: false,
     actionFailed: false,
@@ -85,6 +86,7 @@ export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, em
       kind = 'vision'
       step = 'verify'
       state.visionSeen = true
+      state.verifySeen = true
     } else {
       return
     }
@@ -103,9 +105,9 @@ export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, em
     const name = message.toolName || call?.name
     const step = call?.step || (name?.endsWith('GetLiveContext') ? (state.actionSeen ? 'verify' : 'context') : 'action')
     const result = parseResult(message)
+    if (step === 'context' && result.failed) state.contextFailed = true
     if (step === 'action' && result.failed) state.actionFailed = true
     if (step === 'verify' && result.failed) state.verificationFailed = true
-    if ((state.cameraSeen || state.visionSeen) && result.failed) state.actionFailed = true
     const text = message.content?.find((item) => item.type === 'text')?.text || ''
     const snapshotPath = text.match(/Snapshot saved:\s*([^\r\n]+\.jpg)/i)?.[1]
     if (!result.failed && snapshotPath && onSnapshot) snapshotPromises.push(onSnapshot(snapshotPath.trim()))
@@ -161,6 +163,15 @@ export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, em
       const settledSnapshots = await Promise.allSettled(snapshotPromises)
       const attachments = settledSnapshots.filter((item) => item.status === 'fulfilled').map((item) => item.value)
 
+      if (requireAttachment && state.cameraSeen) {
+        if (attachments.length > 0) {
+          emit('action', 'success', '快照附件', '已建立可在網站短期顯示的快照附件')
+        } else if (!state.actionFailed) {
+          emit('action', 'failed', '快照附件', '已執行攝影機快照，但無法建立可顯示的短期圖片')
+          state.actionFailed = true
+        }
+      }
+
       if (!state.contextSeen) {
         emit('context', 'skipped', 'GetLiveContext', state.actionSeen ? 'OpenClaw 未在操作前查詢狀態' : state.cameraSeen ? '攝影機影像與 HA 設備狀態分開判讀' : '此次要求未呼叫即時狀態工具')
       }
@@ -169,9 +180,11 @@ export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, em
         emit('verify', 'skipped', '狀態驗證', '沒有設備操作需要驗證')
       } else if (!state.verifySeen) {
         if (state.cameraSeen) {
-          if (!state.visionSeen) {
+          if (requireVision && !state.visionSeen) {
             emit('verify', state.actionFailed ? 'skipped' : 'failed', '影像判讀', state.actionFailed ? '快照取得失敗，停止影像判讀' : '取得快照後未完成影像判讀')
             if (!state.actionFailed) state.verificationFailed = true
+          } else if (!requireVision) {
+            emit('verify', 'skipped', '影像判讀', '使用者只要求取得或顯示快照，此次不需要影像判讀')
           }
         } else {
           const status = state.actionFailed ? 'skipped' : 'failed'
@@ -181,7 +194,11 @@ export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, em
       }
 
       return {
-        failed: state.actionFailed || state.verificationFailed,
+        failed: state.contextFailed || state.actionFailed || state.verificationFailed,
+        contextSeen: state.contextSeen,
+        actionSeen: state.actionSeen,
+        cameraSeen: state.cameraSeen,
+        contextFailed: state.contextFailed,
         actionFailed: state.actionFailed,
         verificationFailed: state.verificationFailed,
         attachments,

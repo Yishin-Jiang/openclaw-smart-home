@@ -14,9 +14,10 @@ function safeEqual(left, right) {
 export function cameraRequestPolicy(message) {
   const text = String(message || '')
   const denied = /(不要|不用|不需|別|禁止|無需).{0,10}(快照|照片|圖片|影像|畫面)|(?:no|without)\s+(?:snapshot|photo|image)/i.test(text)
-  const captureRequested = !denied && /(快照|照片|圖片|影像|畫面|看看|看一下|看見|看到|有人|光線|明亮|昏暗|snapshot|photo|image|picture|look|see|anyone|person|lighting)/i.test(text)
+  const analysisRequested = !denied && /(有人|沒有人|無人|人物|人嗎|看見|看到|看看|看一下|描述|判斷|辨識|分析|什麼|狀況|情況|光線|明亮|昏暗|anyone|person|describe|identify|analy[sz]e|what(?:'s| is)|look|see|lighting)/i.test(text)
+  const captureRequested = !denied && (analysisRequested || /(快照|照片|圖片|影像|畫面|snapshot|photo|image|picture)/i.test(text))
   const imageRequested = captureRequested && /(取得|給我|顯示|傳給我|傳送|提供|附上|查看|最新).{0,12}(快照|照片|圖片|影像|畫面)|(快照|照片|圖片|影像|畫面).{0,12}(給我|顯示|傳給我|傳送|提供|附上|查看)|(?:show|send|get|give).{0,12}(?:snapshot|photo|image|picture)/i.test(text)
-  return { captureRequested, imageRequested }
+  return { captureRequested, imageRequested, analysisRequested }
 }
 
 export function createSnapshotStore({ directory, signingSecret, ttlSeconds = 120, allowedSourceDirectory }) {

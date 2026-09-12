@@ -15,10 +15,13 @@ async function request(pathname) {
 const checks = [
   ['control center', '/', async (response) => (await response.text()).includes('<div id="app"></div>')],
   ['energy route', '/energy', async (response) => (await response.text()).includes('<div id="app"></div>')],
+  ['memory route', '/memory', async (response) => (await response.text()).includes('<div id="app"></div>')],
   ['gateway health', '/api/health', async (response) => (await response.json()).ok === true],
   ['HA status', '/api/home/status', async (response) => (await response.json()).source === 'home-assistant'],
   ['HA areas', '/api/home/areas', async (response) => Array.isArray((await response.json()).areas)],
   ['HA energy', '/api/energy', async (response) => (await response.json()).source === 'home-assistant'],
+  ['preferences', '/api/preferences', async (response) => Array.isArray((await response.json()).items)],
+  ['activity', '/api/activity', async (response) => Array.isArray((await response.json()).items)],
 ]
 
 let failed = 0

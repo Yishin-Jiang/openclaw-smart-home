@@ -127,6 +127,7 @@ function normalizeSnapshot(registries, states, options) {
       lastUpdated: state.last_updated || state.last_changed || null,
       source: 'home-assistant',
       cameraMode: domain === 'camera' ? 'connection-only' : null,
+      lastChanged: state.last_changed || null,
     })
   }
 

@@ -41,6 +41,21 @@ Memory is limited. "Mental notes" don't survive session restarts; files do. Befo
 - Home Assistant 場景學到新口語 -> follow the confirm-then-write protocol in `TOOLS.md` § Home Assistant (Self-Updating Notes).
 - You make a mistake -> document it so future-you doesn't repeat it.
 
+### Smart Home Website Memory
+
+The smart-home website owns confirmed user preferences. The section between
+`BEGIN OPENCLAW SMART HOME PREFERENCES` and `END OPENCLAW SMART HOME PREFERENCES`
+in `USER.md` is generated data and must never be edited directly by an agent.
+
+- A request to "remember" something in the website creates a pending preference;
+  it becomes active only after the user confirms the website memory card.
+- In LINE, Telegram, or another channel, do not write a preference directly.
+  Ask the user to add and confirm it on the website's 記憶與紀錄 page.
+- Confirmed preferences are context, never standing permission to control a
+  device, obtain a camera image, or bypass an action confirmation boundary.
+- Never store credentials, tokens, camera contents, occupancy, identity, or
+  inferences about who is home as a preference.
+
 ## Red Lines
 
 - Don't exfiltrate private data. Ever.

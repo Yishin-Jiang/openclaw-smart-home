@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 import {
   ArrowRight,
+  Brain,
   Camera,
   Check,
   CircleDot,
@@ -31,6 +32,8 @@ import {
 import { getHomeStatus, type HomeDevice, type HomeStatus } from './homeApi'
 import { flowSteps } from './mockData'
 import LiveEnergyPage from './EnergyPage'
+import MemoryPage from './MemoryPage'
+import { confirmPreference, deletePreference } from './memoryApi'
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -56,6 +59,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navItems = [
     { to: '/', label: '控制中心', icon: Grid2X2 },
     { to: '/energy', label: '能耗分析', icon: Zap },
+    { to: '/memory', label: '記憶與紀錄', icon: Brain },
   ]
 
   return (
@@ -115,6 +119,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<ControlCenter />} />
           <Route path="/energy" element={<LiveEnergyPage />} />
+          <Route path="/memory" element={<MemoryPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -295,6 +300,8 @@ function ConversationPanel({ onFlowChange }: { onFlowChange: Dispatch<SetStateAc
   const [voiceMode, setVoiceMode] = useState<VoiceMode>('idle')
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [voiceError, setVoiceError] = useState('')
+  const [memoryCandidate, setMemoryCandidate] = useState<import('./chatApi').MemoryCandidate | null>(null)
+  const [memoryBusy, setMemoryBusy] = useState(false)
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const voiceTranscriptRef = useRef('')
   const voiceCancelledRef = useRef(false)
@@ -445,6 +452,7 @@ function ConversationPanel({ onFlowChange }: { onFlowChange: Dispatch<SetStateAc
         onDone: (assistantMessage) => {
           setMessages((current) => current.map((message) => message.id === assistantId ? assistantMessage : message))
         },
+        onMemoryCandidate: setMemoryCandidate,
       })
       setGatewayState('connected')
       setGatewayDetail('OpenClaw Gateway 已連線')
@@ -619,6 +627,22 @@ function ConversationPanel({ onFlowChange }: { onFlowChange: Dispatch<SetStateAc
                 <button type="button" className="text-button" onClick={cancelVoice}>關閉</button>
                 {speechSupported && <button type="button" className="text-button" onClick={startVoice}><Mic size={15} /> 再試一次</button>}
               </div>
+            </div>
+          )}
+          {memoryCandidate && (
+            <div className={`memory-candidate ${memoryCandidate.status === 'active' ? 'is-active' : ''}`}>
+              <Brain size={19} />
+              <div><strong>{memoryCandidate.status === 'active' ? '已記住' : '要記住這項偏好嗎？'}</strong><p>{memoryCandidate.statement}</p><small>偏好不代表設備控制授權。</small></div>
+              {memoryCandidate.status !== 'active' && <div className="memory-candidate__actions">
+                <button type="button" className="send-button" disabled={memoryBusy} onClick={async () => {
+                  setMemoryBusy(true)
+                  try { const result = await confirmPreference(memoryCandidate.id); setMemoryCandidate(result.preference) } catch (memoryError) { setError(memoryError instanceof Error ? memoryError.message : '無法儲存偏好') } finally { setMemoryBusy(false) }
+                }}><Check size={15} /> 確認記住</button>
+                <button type="button" className="text-button" disabled={memoryBusy} onClick={async () => {
+                  setMemoryBusy(true)
+                  try { await deletePreference(memoryCandidate.id); setMemoryCandidate(null) } catch (memoryError) { setError(memoryError instanceof Error ? memoryError.message : '無法刪除偏好') } finally { setMemoryBusy(false) }
+                }}>不記住</button>
+              </div>}
             </div>
           )}
         </form>

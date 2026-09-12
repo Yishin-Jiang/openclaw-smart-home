@@ -19,6 +19,11 @@ React + TypeScript 前端與 Node.js 後端代理。瀏覽器不會取得 Gatewa
 - `GET /api/health`：檢查後端與 Gateway 連線。
 - `GET /api/home/status`：取得正規化後的 HA Area、設備、Entity 與狀態。
 - `GET /api/home/areas`：取得 HA Area 與各區設備連線摘要。
+- `GET /api/monitor/status`：取得主動感知服務、門檻、監測實體與最近通知狀態（不含秘密）。
+- `GET /api/activity`、`DELETE /api/activity[/:id]`：查看或刪除網站使用紀錄。
+- `GET /api/preferences`：查看待確認、使用中及停用偏好。
+- `POST /api/preferences/candidates`：建立待確認偏好，不會直接生效。
+- `POST /api/preferences/:id/confirm`、`PATCH /api/preferences/:id`、`DELETE /api/preferences/:id`：確認、修改、停用或忘記偏好。
 - `GET /api/chat/:sessionId/snapshots/:snapshotId`：以短效簽章讀取 OpenClaw 明確回傳的攝影機快照。
 - `GET /api/energy`：讀取 P110M 的 HA 即時功率、總累積電量與歷史資料，計算今日／本週／本月用電及趨勢。
 - `POST /api/energy/insights`：按需將已由 HA 計算的數值交給 OpenClaw 產生白話摘要；不讓模型計算或捏造數字。
@@ -57,6 +62,24 @@ React + TypeScript 前端與 Node.js 後端代理。瀏覽器不會取得 Gatewa
 - Caddy 在 `https://192.168.0.102:8443` 提供 HTTPS 與 Basic Auth；`http://192.168.0.102:8080` 只負責導向 HTTPS。
 - API 使用明確 Origin allowlist；一般 API 每分鐘最多 120 次，聊天與能耗摘要每分鐘最多 12 次。
 - `openclaw-smart-home-web.service` 與 `openclaw-smart-home-proxy.service` 為永久 user systemd 服務，均已啟用自動恢復。
+
+## 主動感知
+
+- Node 後端每 15 秒透過既有唯讀 HA API 觀察指定實體；所有通知門檻由固定程式規則判定，不交由模型猜測。
+- 燈與 P110M 連續離線 2 分鐘、攝影機連續離線 5 分鐘才提醒；恢復後需穩定 1 分鐘才發恢復通知。
+- 同一離線事件最多提醒 2 次，第二次最快間隔 30 分鐘。重啟狀態保存在權限受限的 `data/monitor-state.json`，避免重複通知。
+- P110M 保持開啟 4 小時時只提醒「持續使用中」，不宣稱設備故障或使用者忘記關閉；功率安全仍由 P110M 本身處理。
+- 規則只喚醒工具白名單為 `GetLiveContext` 與訊息投遞的 `home-monitor` Agent；它不能控制設備或取得攝影機快照。若要操作，使用者仍須另行送出完整明確指令。
+- 通知透過 Gateway loopback Hook 送至 LINE。Hook 使用不同於 Gateway Token 的獨立秘密，且只允許目標 Agent `home-monitor`。
+
+## 輕量記憶與使用紀錄
+
+- 網站使用紀錄保存在 VM 的 `MEMORY_DATA_DIR/activity.json`，預設保留 30 天、最多 1,000 筆；只包含要求摘要、類型、相關 Entity ID、結果與耗時。
+- 長期偏好的唯一資料來源為 `MEMORY_DATA_DIR/preferences.json`。網站聊天只有明確的「記住……」句型才建立候選，且使用者必須在卡片或 `/memory` 頁確認後才會啟用。
+- 有效偏好會同步至 `USER.md` 的受管理區塊，讓網站、LINE 與 Telegram 共用；原有 `USER.md` 內容會保留。
+- 偏好可以修改、停用或完整刪除。修改會保留最多 20 筆本機版本紀錄，刪除時會一併從受管理的 `USER.md` 區塊移除。
+- 不接受密碼、Token、憑證、RTSP 網址、攝影機人物或在家狀態等敏感記憶。使用紀錄不保存模型內部思考、憑證或攝影機照片。
+- 每次網站聊天都會明示 OpenClaw 不可自行寫入記憶檔；偏好只提供上下文，不能授權控制設備或取得攝影機畫面。
 
 ## 能耗頁（第七階段）
 
