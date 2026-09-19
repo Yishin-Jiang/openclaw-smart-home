@@ -1,2 +1,37 @@
 openclaw-workspace-state.json
-skills/
+
+# Personal memory and runtime state must stay local.
+MEMORY.md
+memory/
+
+# Secrets and machine-local configuration.
+.env
+.env.*
+!.env.example
+*.env
+!*.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Generated, archived, and privacy-sensitive artifacts.
+.tmp-*/
+.tmp-*.jpg
+tmp/
+*.tgz
+*.jpg
+*.jpeg
+**/data/
+**/snapshots/
+
+# Local infrastructure audit contains private LAN topology and observed values.
+docs/phase-1-vm-audit-2026-09-11.md
+
+# Local/runtime skills are ignored by default. Only the reviewed G350 skill
+# source is allowed into version control; its runtime cache/binary stay local.
+skills/*
+!skills/ha-camera-snapshot/
+!skills/ha-camera-snapshot/**
+skills/ha-camera-snapshot/cache/
+skills/ha-camera-snapshot/ffmpeg
