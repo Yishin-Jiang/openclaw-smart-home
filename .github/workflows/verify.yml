@@ -9,6 +9,14 @@ permissions:
   contents: read
 
 jobs:
+  deployment-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Isolated deployment and rollback tests
+        run: bash web/scripts/test-deployment.sh
+
   verify:
     runs-on: windows-latest
     timeout-minutes: 15
