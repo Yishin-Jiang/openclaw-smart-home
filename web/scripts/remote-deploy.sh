@@ -49,7 +49,7 @@ restore() {
       mv "$path" "$rescue/$path" || return 1
     fi
   done
-  tar -xf "$stage/backup.tar" -C "$base" || return 1
+  tar -xpf "$stage/backup.tar" -C "$base" || return 1
   systemctl --user start "${services[@]}" || return 1
   health || return 1
   printf 'rolled-back\n' > "$stage/status"

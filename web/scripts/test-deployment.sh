@@ -23,6 +23,8 @@ skill=.openclaw/workspace/skills/ha-camera-snapshot
 mkdir -p "$web/"{dist,server,node_modules,scripts,data} "$skill/cache" .config/openclaw-smart-home .config/systemd/user/openclaw-gateway.service.d
 for path in dist/version server/version node_modules/version package.json package-lock.json scripts/smoke-test.mjs; do printf old > "$web/$path"; done
 for file in SKILL.md hls-url.mjs inspect-capabilities.mjs snapshot.sh status.sh stream-frame.mjs stream-info.mjs; do printf '# old\n' > "$skill/$file"; done
+chmod 755 "$web/server"
+chmod 644 "$web/server/version"
 printf secret > .config/openclaw-smart-home/web.env
 printf config > .config/systemd/user/openclaw-gateway.service.d/90-smart-home-camera.conf
 printf user-data > "$web/data/preferences.json"
@@ -51,6 +53,10 @@ test "$(cat "$web/server/version")" = new
 printf user-data-new > "$web/data/preferences.json"
 bash "$runner" rollback "$id"
 test "$(cat "$web/server/version")" = old
+if [[ $(uname -s) == Linux ]]; then
+  test "$(stat -c %a "$web/server")" = 755
+  test "$(stat -c %a "$web/server/version")" = 644
+fi
 preserved
 if bash "$runner" rollback "$id"; then exit 1; fi
 echo 'PASS update, explicit rollback, data/config preservation, duplicate rollback rejection'
