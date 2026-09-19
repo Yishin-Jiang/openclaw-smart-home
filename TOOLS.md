@@ -51,12 +51,32 @@ The device and scene entries below are contextual hints for local names, aliases
 
 ### Devices
 - `light.moes_matter_light` — 客廳 MOES Matter 燈泡
-- `switch.smart_wi_fi_plug` — TP-Link Tapo P100M 智慧插座（device_class: outlet）
+- `switch.smart_wi_fi_plug` — TP-Link Tapo P110M 智慧插座（device_class: outlet）
+- `camera.aqara_g350` — 客廳 Aqara G350 攝影機；即時狀態由 HA MCP 查詢，畫面由本機 `ha-camera-snapshot` skill 取得
+- 客廳一般天花板燈（無 HA entity）— 非智慧燈，Home Assistant 無法查詢或控制，只能從攝影機畫面判斷房間是否受到照明
+
+### Distinguish Smart-Light State from Visible Room Lighting
+
+The MOES Matter bulb and the ordinary ceiling light are separate physical lights. Never treat either one as the state of the other.
+
+- For a generic question such as 「客廳燈有開嗎？」, MUST use both `GetLiveContext` and one fresh `ha-camera-snapshot` image.
+- Report the two observations separately: (1) the authoritative HA state of `light.moes_matter_light`, and (2) whether the room visibly appears illuminated in the camera frame.
+- MOES `off` does not mean the room is dark; the ordinary ceiling light may be on. A bright frame does not prove the MOES bulb is on.
+- The ordinary ceiling light has no HA entity, so describe its apparent visual state with appropriate uncertainty and never claim it was queried or controlled through HA.
 
 ### Scenes (confirm in `GetLiveContext`, then activate with `HassTurnOn`)
 - `scene.yue_du_mo_shi` ("閱讀模式") — light.moes_matter_light 調到約70%亮度(178/255)、暖色溫4000K。適用指令：「我要看書了」「閱讀模式」「看書燈光」
+- `scene.ju_yuan_mo_shi` ("劇院模式") — light.moes_matter_light 開啟並調至約10%亮度(26/255)，Smart Wi-Fi Plug 維持原狀。適用指令：「劇院模式」「電影模式」「我要看電影」
+- `scene.jie_neng_mo_shi` ("節能模式") — 關閉 light.moes_matter_light 與 Smart Wi-Fi Plug；G350 攝影機維持監控。適用指令：「節能模式」「離家模式」「我出門了」「全部關掉」
 
-<!-- 之後插座/攝影機到貨、新增更多場景（劇院模式、節能模式）時，比照上面格式繼續往下加 -->
+### Departure Verification Workflow
+
+- For 「我要出門了，幫我確認家裡狀況」「離家檢查」「啟動離家模式並確認設備」, read and follow `skills/ha-departure-check/SKILL.md`.
+- This is more than a scene alias: it must activate 節能模式, verify the MOES light and P110M outlet with fresh MCP context, check G350 metadata, and send one final summary.
+- A normal departure check does not authorize a camera snapshot. Only perform the optional visual step when the request explicitly asks to look at the room.
+- Never imply that the ordinary ceiling light was turned off; it is not connected to Home Assistant.
+
+<!-- 新增更多場景時，比照上面格式繼續往下加 -->
 
 ### Self-Updating Notes — How You Learn New Phrases
 
@@ -80,12 +100,13 @@ MCP tool results are visible to you but are **NOT automatically sent to the user
 
 **Never emit `NO_REPLY` after taking a real-world action.** Reserve `NO_REPLY` only for turns where you took no action and truly have nothing to add (e.g. a redundant heartbeat ping). If you catch yourself thinking "I already responded to this" right after a tool call in the same turn chain, that is a sign you are confusing the tool result with a delivered reply — write the reply anyway.
 
-### Camera Actions Require Explicit Confirmation (Security Mitigation)
+### Camera Snapshot and Confirmation Policy
 
-The previous third-party `home-assistant-skill` audit showed why generic camera trigger words are unsafe. The MCP allowlist currently exposes no camera snapshot tool. If camera tools are added later, the following confirmation policy still applies to the Aqara Camera Hub G350 via RTSP:
+The MCP allowlist has no camera image tool, but the local `ha-camera-snapshot` skill can securely retrieve one fresh JPEG from the Aqara G350 through Home Assistant. Follow that skill whenever the user explicitly asks to inspect the current room image.
 
-1. **Never call any tool that retrieves actual image/video content just because the word "camera"/"監視器"/"畫面"/"看看" appeared somewhere in the conversation.** A loose mention is not a request.
-2. Before retrieving a snapshot, always confirm explicitly first, e.g.: 「你是想看客廳攝影機現在的畫面嗎？」 Only proceed after the user gives a clear yes/confirmation — same confirm-before-act pattern as the Self-Updating Notes protocol above.
-3. Listing camera entities or online/offline metadata through `GetLiveContext` does NOT need confirmation — it is low-risk metadata only, not the sensitive part.
-4. If a request is ambiguous about whether the user wants an actual snapshot vs. just camera status, default to asking — never default to pulling the image.
-5. This rule exists because of a specific, documented audit finding, not general caution — do not relax it without the user explicitly revisiting this decision.
+1. An action-oriented request such as 「客廳現在有人嗎？」「幫我看看客廳」「客廳燈有開嗎？」 or 「取得客廳最新畫面」 is itself explicit authorization for one fresh snapshot. Do not ask for a second confirmation.
+2. A loose mention of "camera"/「監視器」/「畫面」/「看看」 that does not request current visual information is not authorization. If intent is ambiguous, ask whether the user wants a fresh snapshot.
+3. For an authorized snapshot request, read and follow `skills/ha-camera-snapshot/SKILL.md`. Never improvise another credential, endpoint, output path, or retention policy.
+4. Camera online/offline or connection questions are metadata-only and do not authorize a snapshot. Read the same skill and run its `status.sh`; if the camera is absent from `GetLiveContext`, do not infer connectivity from an earlier snapshot.
+5. Do not identify people. Report only whether a person is visibly present in the single frame, and state uncertainty when visibility is limited.
+6. For 「客廳燈有開嗎？」 and equivalent generic room-light questions, follow the lighting-source distinction above and use both MCP state and visual evidence.
