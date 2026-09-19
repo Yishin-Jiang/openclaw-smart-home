@@ -1,0 +1,30 @@
+[
+  {
+    "path": "agents.list[1].tools.allow",
+    "value": ["homeassistant__GetLiveContext", "message"]
+  },
+  {
+    "path": "hooks.enabled",
+    "value": true
+  },
+  {
+    "path": "hooks.path",
+    "value": "/hooks"
+  },
+  {
+    "path": "hooks.token",
+    "value": "${OPENCLAW_HOOK_TOKEN}"
+  },
+  {
+    "path": "hooks.allowRequestSessionKey",
+    "value": false
+  },
+  {
+    "path": "hooks.allowedAgentIds",
+    "value": ["home-monitor"]
+  },
+  {
+    "path": "hooks.maxBodyBytes",
+    "value": 16384
+  }
+]

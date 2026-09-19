@@ -1,0 +1,28 @@
+{
+	admin 127.0.0.1:2019
+	auto_https disable_redirects
+}
+
+http://{$SMART_HOME_HOST}:8080 {
+	redir https://{$SMART_HOME_HOST}:8443{uri} permanent
+}
+
+https://{$SMART_HOME_HOST}:8443 {
+	tls internal
+	encode zstd gzip
+
+	basic_auth {
+		smart-home {$SMART_HOME_PASSWORD_HASH}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+	}
+
+	reverse_proxy 127.0.0.1:4173 {
+		flush_interval -1
+	}
+}

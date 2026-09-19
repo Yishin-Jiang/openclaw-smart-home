@@ -1,0 +1,20 @@
+[Unit]
+Description=OpenClaw Smart Home HTTPS Reverse Proxy
+After=network-online.target openclaw-smart-home-web.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+EnvironmentFile=%h/.config/openclaw-smart-home/proxy.env
+ExecStart=%h/.local/bin/caddy run --environ --config %h/.config/openclaw-smart-home/Caddyfile
+ExecReload=%h/.local/bin/caddy reload --config %h/.config/openclaw-smart-home/Caddyfile --force
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/contracts/home-status.schema.json",
+  "title": "Smart Home Read-only Status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "source", "areas", "scenes", "updatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["homeAssistant", "openClaw"],
+      "properties": {
+        "homeAssistant": { "$ref": "#/$defs/serviceStatus" },
+        "openClaw": { "$ref": "#/$defs/serviceStatus" }
+      }
+    },
+    "areas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/area" }
+    },
+    "scenes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/scene" }
+    },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "serviceStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reachable", "version"],
+      "properties": {
+        "reachable": { "type": "boolean" },
+        "version": { "type": ["string", "null"] }
+      }
+    },
+    "area": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "devices"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "devices": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/device" }
+        }
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "entityId",
+        "name",
+        "type",
+        "state",
+        "available",
+        "controllable",
+        "controlPath",
+        "areaSource",
+        "haAreaId",
+        "lastUpdated",
+        "stale",
+        "energy"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "entityId": { "type": ["string", "null"] },
+        "name": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": ["light", "outlet", "camera", "unmanaged"]
+        },
+        "state": { "type": "string" },
+        "available": { "type": "boolean" },
+        "controllable": { "type": "boolean" },
+        "controlPath": {
+          "enum": ["openclaw-ha-mcp", "none"]
+        },
+        "areaSource": {
+          "enum": ["home_assistant", "website_config", "unassigned"]
+        },
+        "haAreaId": { "type": ["string", "null"] },
+        "lastUpdated": { "type": ["string", "null"], "format": "date-time" },
+        "stale": { "type": "boolean" },
+        "note": { "type": "string" },
+        "energy": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/energyMapping" }
+          ]
+        }
+      }
+    },
+    "energyMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "powerEntityId",
+        "importEnergyEntityId",
+        "exportEnergyEntityId",
+        "voltageEntityId",
+        "currentEntityId",
+        "todayEntityId",
+        "todayDerivedFrom"
+      ],
+      "properties": {
+        "powerEntityId": { "type": ["string", "null"] },
+        "importEnergyEntityId": { "type": ["string", "null"] },
+        "exportEnergyEntityId": { "type": ["string", "null"] },
+        "voltageEntityId": { "type": ["string", "null"] },
+        "currentEntityId": { "type": ["string", "null"] },
+        "todayEntityId": { "type": ["string", "null"] },
+        "todayDerivedFrom": { "type": ["string", "null"] }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entityId", "name", "available", "lastActivated"],
+      "properties": {
+        "entityId": { "type": "string", "pattern": "^scene\\." },
+        "name": { "type": "string", "minLength": 1 },
+        "available": { "type": "boolean" },
+        "lastActivated": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}

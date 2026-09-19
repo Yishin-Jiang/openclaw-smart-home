@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="390" viewBox="0 0 1200 390">
+  <rect width="1200" height="390" rx="28" fill="#0B1318"/>
+  <text x="52" y="55" fill="#EEF5F4" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">OpenClaw icon directions</text>
+  <text x="52" y="82" fill="#93A9B0" font-family="Segoe UI, Arial, sans-serif" font-size="14" letter-spacing="1.8">SMART HOME ASSISTANT · 32–64 PX</text>
+
+  <g transform="translate(42 112)">
+    <rect width="260" height="230" rx="20" fill="#121E24" stroke="#2A3A42"/>
+    <g transform="translate(92 32) scale(1.2)">
+      <rect x="14" y="14" width="36" height="36" rx="12" transform="rotate(45 32 32)" fill="#65E2BF"/>
+      <circle cx="32" cy="32" r="10" fill="#0B1F22"/>
+      <circle cx="32" cy="32" r="3.5" fill="#65E2BF"/>
+    </g>
+    <text x="24" y="143" fill="#65E2BF" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">A · CORE</text>
+    <text x="24" y="174" fill="#EEF5F4" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">OpenClaw</text>
+    <text x="24" y="201" fill="#93A9B0" font-family="Segoe UI, Arial, sans-serif" font-size="12" letter-spacing="1.5">SMART HOME ASSISTANT</text>
+  </g>
+
+  <g transform="translate(328 112)">
+    <rect width="260" height="230" rx="20" fill="#121E24" stroke="#2A3A42"/>
+    <g transform="translate(92 32) scale(1.2)">
+      <circle cx="32" cy="32" r="26" fill="#65E2BF"/>
+      <path d="M20 21H31C39.284 21 46 25.925 46 32C46 38.075 39.284 43 31 43H20" stroke="#0B1F22" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="20" cy="21" r="3" fill="#0B1F22"/>
+      <circle cx="20" cy="43" r="3" fill="#0B1F22"/>
+    </g>
+    <text x="24" y="143" fill="#65E2BF" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">B · ORBIT</text>
+    <text x="24" y="174" fill="#EEF5F4" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">OpenClaw</text>
+    <text x="24" y="201" fill="#93A9B0" font-family="Segoe UI, Arial, sans-serif" font-size="12" letter-spacing="1.5">SMART HOME ASSISTANT</text>
+  </g>
+
+  <g transform="translate(614 112)">
+    <rect width="260" height="230" rx="20" fill="#121E24" stroke="#2A3A42"/>
+    <g transform="translate(92 32) scale(1.2)">
+      <path d="M32 5 55.383 18.5v27L32 59 8.617 45.5v-27L32 5Z" fill="#65E2BF"/>
+      <path d="m21 38 11-15 11 15M22 38h20" stroke="#0B1F22" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="32" cy="23" r="3.5" fill="#0B1F22"/><circle cx="21" cy="38" r="3.5" fill="#0B1F22"/><circle cx="43" cy="38" r="3.5" fill="#0B1F22"/>
+    </g>
+    <text x="24" y="143" fill="#65E2BF" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">C · NODES</text>
+    <text x="24" y="174" fill="#EEF5F4" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">OpenClaw</text>
+    <text x="24" y="201" fill="#93A9B0" font-family="Segoe UI, Arial, sans-serif" font-size="12" letter-spacing="1.5">SMART HOME ASSISTANT</text>
+  </g>
+
+  <g transform="translate(900 112)">
+    <rect width="260" height="230" rx="20" fill="#121E24" stroke="#2A3A42"/>
+    <g transform="translate(92 32) scale(1.2)">
+      <rect x="6" y="6" width="52" height="52" rx="19" fill="#65E2BF"/>
+      <path d="M16 34h9l5-12 7 21 5-9h6" stroke="#0B1F22" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="16" cy="34" r="2.5" fill="#0B1F22"/><circle cx="48" cy="34" r="2.5" fill="#0B1F22"/>
+    </g>
+    <text x="24" y="143" fill="#65E2BF" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">D · SIGNAL</text>
+    <text x="24" y="174" fill="#EEF5F4" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">OpenClaw</text>
+    <text x="24" y="201" fill="#93A9B0" font-family="Segoe UI, Arial, sans-serif" font-size="12" letter-spacing="1.5">SMART HOME ASSISTANT</text>
+  </g>
+</svg>
