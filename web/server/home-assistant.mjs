@@ -80,10 +80,79 @@ export function fetchHaRegistries(baseUrl, token, timeoutMs) {
 function classifyState(domain, state) {
   if (!state || state === 'unknown') return { status: 'unknown', label: '未知' }
   if (state === 'unavailable') return { status: 'offline', label: '離線' }
-  if (domain === 'camera') return { status: 'on', label: '連線正常' }
   if (state === 'on') return { status: 'on', label: '開啟' }
   if (state === 'off') return { status: 'off', label: '關閉' }
   return { status: 'unknown', label: '未知' }
+}
+
+export function classifyCameraState(state, cameraProbe, fetchedAtMs = Date.now(), offlineMs = 300000) {
+  if (!state || state === 'unknown') {
+    return { status: 'unknown', label: '連線待確認', reason: 'ha-state-unknown' }
+  }
+  if (state === 'unavailable') {
+    return { status: 'offline', label: '離線', reason: 'ha-unavailable' }
+  }
+  if (cameraProbe?.reachable === true) {
+    return { status: 'on', label: '連線正常', reason: null }
+  }
+  if (cameraProbe?.reachable === false) {
+    const failureSinceMs = Date.parse(cameraProbe.failureSince || '')
+    const failureAgeMs = Number.isFinite(failureSinceMs)
+      ? Math.max(0, fetchedAtMs - failureSinceMs)
+      : 0
+    const sustainedFailure = (cameraProbe.failureCount || 0) >= 2 && failureAgeMs >= offlineMs
+    return sustainedFailure
+      ? { status: 'offline', label: '離線', reason: 'stream-probe-failed' }
+      : { status: 'unknown', label: '連線待確認', reason: 'stream-probe-failed' }
+  }
+  return { status: 'unknown', label: '連線待確認', reason: 'stream-probe-pending' }
+}
+
+export async function probeCameraStream(baseUrl, token, entityId, timeoutMs = 8000) {
+  const streamResult = await withTimeout(new Promise((resolve, reject) => {
+    const socket = new WebSocket(websocketUrl(baseUrl))
+    let settled = false
+    const finish = (error, value) => {
+      if (settled) return
+      settled = true
+      socket.close()
+      if (error) reject(error)
+      else resolve(value)
+    }
+    socket.addEventListener('message', (event) => {
+      let message
+      try {
+        message = JSON.parse(String(event.data))
+      } catch {
+        return finish(new Error('Home Assistant camera probe returned invalid JSON'))
+      }
+      if (message.type === 'auth_required') return socket.send(JSON.stringify({ type: 'auth', access_token: token }))
+      if (message.type === 'auth_invalid') return finish(new Error('Home Assistant camera probe authentication failed'))
+      if (message.type === 'auth_ok') {
+        socket.send(JSON.stringify({ id: 1, type: 'camera/stream', entity_id: entityId, format: 'hls' }))
+        return
+      }
+      if (message.type === 'result' && message.id === 1) {
+        if (!message.success || !message.result?.url) return finish(new Error('Home Assistant camera stream is unavailable'))
+        finish(null, new URL(message.result.url, baseUrl).toString())
+      }
+    })
+    socket.addEventListener('error', () => finish(new Error('Home Assistant camera probe WebSocket failed')))
+    socket.addEventListener('close', () => {
+      if (!settled) finish(new Error('Home Assistant camera probe WebSocket closed early'))
+    })
+  }), timeoutMs, 'Home Assistant camera stream URL timed out')
+
+  const response = await fetch(streamResult, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(timeoutMs),
+  })
+  if (!response.ok) {
+    await response.body?.cancel()
+    throw new Error(`Home Assistant camera stream probe returned ${response.status}`)
+  }
+  await response.body?.cancel()
+  return true
 }
 
 function deviceKind(domain) {
@@ -92,7 +161,8 @@ function deviceKind(domain) {
 }
 
 function normalizeSnapshot(registries, states, options) {
-  const fetchedAt = new Date().toISOString()
+  const fetchedAtMs = Date.now()
+  const fetchedAt = new Date(fetchedAtMs).toISOString()
   const areaById = new Map(registries.areas.map((area) => [area.area_id, area]))
   const deviceById = new Map(registries.devices.map((device) => [device.id, device]))
   const registryByEntity = new Map(registries.entities.map((entity) => [entity.entity_id, entity]))
@@ -112,7 +182,10 @@ function normalizeSnapshot(registries, states, options) {
     const haDevice = entity?.device_id ? deviceById.get(entity.device_id) : undefined
     const areaId = entity?.area_id || haDevice?.area_id
     const area = normalizedAreaById.get(areaId) || unassigned
-    const classification = classifyState(domain, state.state)
+    const cameraProbe = domain === 'camera' ? options.cameraProbes.get(state.entity_id) : null
+    const classification = domain === 'camera'
+      ? classifyCameraState(state.state, cameraProbe, fetchedAtMs, options.cameraProbeOfflineMs)
+      : classifyState(domain, state.state)
     const name = entity?.name || state.attributes?.friendly_name || entity?.original_name || haDevice?.name_by_user || haDevice?.name || state.entity_id
 
     area.devices.push({
@@ -124,6 +197,12 @@ function normalizeSnapshot(registries, states, options) {
       status: classification.status,
       statusLabel: classification.label,
       available: classification.status === 'on' || classification.status === 'off',
+      availabilityReason: classification.reason || (classification.status === 'offline' ? 'ha-unavailable' : null),
+      cameraProbeMode: domain === 'camera' ? 'hls-manifest-headers-only' : null,
+      lastProbeAt: cameraProbe?.lastAttemptAt || null,
+      lastProbeSuccessAt: cameraProbe?.lastSuccessAt || null,
+      probeFailureSince: cameraProbe?.failureSince || null,
+      probeFailureCount: cameraProbe?.failureCount || 0,
       lastUpdated: state.last_updated || state.last_changed || null,
       source: 'home-assistant',
       cameraMode: domain === 'camera' ? 'connection-only' : null,
@@ -161,11 +240,46 @@ export function createHomeAssistantClient({
   timeoutMs = 6000,
   cacheTtlMs = 15000,
   staleAfterMs = 120000,
+  cameraProbeIntervalMs = 60000,
+  cameraProbeTimeoutMs = 8000,
+  cameraProbeOfflineMs = 300000,
   domains = DEFAULT_DOMAINS,
 }) {
   let cache = null
+  const cameraProbes = new Map()
   const normalizedBaseUrl = baseUrl?.replace(/\/$/, '')
-  const options = { domains: new Set(domains) }
+  const options = { domains: new Set(domains), cameraProbes, cameraProbeOfflineMs }
+
+  function refreshCameraProbe(entityId) {
+    const previous = cameraProbes.get(entityId) || {}
+    const currentTime = Date.now()
+    if (previous.running || (previous.lastAttemptAt && currentTime - Date.parse(previous.lastAttemptAt) < cameraProbeIntervalMs)) return
+    const attemptAt = new Date(currentTime).toISOString()
+    cameraProbes.set(entityId, { ...previous, running: true, lastAttemptAt: attemptAt })
+    probeCameraStream(normalizedBaseUrl, token, entityId, cameraProbeTimeoutMs)
+      .then(() => {
+        cameraProbes.set(entityId, {
+          reachable: true,
+          running: false,
+          lastAttemptAt: attemptAt,
+          lastSuccessAt: new Date().toISOString(),
+          failureSince: null,
+          failureCount: 0,
+          lastError: null,
+        })
+      })
+      .catch((error) => {
+        const latest = cameraProbes.get(entityId) || {}
+        cameraProbes.set(entityId, {
+          ...latest,
+          reachable: false,
+          running: false,
+          failureSince: latest.failureSince || attemptAt,
+          failureCount: (latest.failureCount || 0) + 1,
+          lastError: String(error?.message || error).slice(0, 160),
+        })
+      })
+  }
 
   async function fetchSnapshot() {
     if (!normalizedBaseUrl || !token) throw new Error('Home Assistant read-only API is not configured')
@@ -173,6 +287,9 @@ export function createHomeAssistantClient({
       fetchHaRegistries(normalizedBaseUrl, token, timeoutMs),
       fetchHaJson(`${normalizedBaseUrl}/api/states`, token, timeoutMs),
     ])
+    for (const state of states) {
+      if (state.entity_id.startsWith('camera.')) refreshCameraProbe(state.entity_id)
+    }
     cache = normalizeSnapshot(registries, states, options)
     return cache
   }

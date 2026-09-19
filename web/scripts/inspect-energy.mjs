@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
-const baseUrl = (process.env.HOME_ASSISTANT_URL || 'http://192.168.0.103:8123').replace(/\/$/, '')
-const token = (await readFile(process.env.HOME_ASSISTANT_TOKEN_FILE || '/home/vboxuser/.config/openclaw/ha_token', 'utf8')).trim()
+const baseUrl = (process.env.HOME_ASSISTANT_URL || 'http://homeassistant.local:8123').replace(/\/$/, '')
+const token = (await readFile(process.env.HOME_ASSISTANT_TOKEN_FILE || join(homedir(), '.config', 'openclaw', 'ha_token'), 'utf8')).trim()
 const socketUrl = new URL(baseUrl)
 socketUrl.protocol = socketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
 socketUrl.pathname = '/api/websocket'

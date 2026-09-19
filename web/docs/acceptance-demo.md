@@ -3,7 +3,7 @@
 ## 展示前檢查
 
 1. 確認 VM 防火牆已只對 LAN 放行 TCP 8443，並在展示裝置信任 `deploy/caddy-local-root.crt`。
-2. 開啟 `https://192.168.0.102:8443`，以部署帳號登入。
+2. 開啟 `https://<SMART_HOME_HOST>:8443`，以部署帳號登入。
 3. 確認控制中心顯示 OpenClaw 與 Home Assistant 已連線。
 4. 確認設備卡只顯示 HA 實際存在的設備，攝影機卡不會自動載入畫面。
 5. 開啟能耗分析，確認數值來源顯示 P110M 的 HA Entity ID；缺少歷史基準的欄位必須顯示 `—`。

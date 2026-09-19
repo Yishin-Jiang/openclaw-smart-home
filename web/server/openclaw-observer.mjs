@@ -36,7 +36,7 @@ function resultSummary(name, result) {
   return result.failed ? `${label} 執行失敗` : `${label} 執行完成`
 }
 
-export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, emit, onSnapshot, requireAttachment = false, requireVision = false }) {
+export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, emit, onSnapshot, requireAttachment = false, requireVision = false, externalContextAvailable = false }) {
   const seenMessages = new Set()
   const toolCalls = new Map()
   const state = {
@@ -172,7 +172,7 @@ export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, em
         }
       }
 
-      if (!state.contextSeen) {
+      if (!state.contextSeen && !externalContextAvailable) {
         emit('context', 'skipped', 'GetLiveContext', state.actionSeen ? 'OpenClaw 未在操作前查詢狀態' : state.cameraSeen ? '攝影機影像與 HA 設備狀態分開判讀' : '此次要求未呼叫即時狀態工具')
       }
       if (!state.actionSeen && !state.cameraSeen) {
@@ -193,14 +193,20 @@ export function createOpenClawObserver({ sessionId, startedAt, sessionsIndex, em
         }
       }
 
+      const missingPreActionContext = state.actionSeen && !state.contextSeen && !externalContextAvailable
+      if (missingPreActionContext) {
+        emit('context', 'failed', '操作前狀態查詢', '設備操作前未取得 Home Assistant 即時狀態，流程不符合安全規則')
+      }
+
       return {
-        failed: state.contextFailed || state.actionFailed || state.verificationFailed,
+        failed: state.contextFailed || state.actionFailed || state.verificationFailed || missingPreActionContext,
         contextSeen: state.contextSeen,
         actionSeen: state.actionSeen,
         cameraSeen: state.cameraSeen,
         contextFailed: state.contextFailed,
         actionFailed: state.actionFailed,
         verificationFailed: state.verificationFailed,
+        missingPreActionContext,
         attachments,
       }
     },

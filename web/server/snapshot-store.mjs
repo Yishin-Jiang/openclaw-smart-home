@@ -13,10 +13,13 @@ function safeEqual(left, right) {
 
 export function cameraRequestPolicy(message) {
   const text = String(message || '')
-  const denied = /(不要|不用|不需|別|禁止|無需).{0,10}(快照|照片|圖片|影像|畫面)|(?:no|without)\s+(?:snapshot|photo|image)/i.test(text)
-  const analysisRequested = !denied && /(有人|沒有人|無人|人物|人嗎|看見|看到|看看|看一下|描述|判斷|辨識|分析|什麼|狀況|情況|光線|明亮|昏暗|anyone|person|describe|identify|analy[sz]e|what(?:'s| is)|look|see|lighting)/i.test(text)
-  const captureRequested = !denied && (analysisRequested || /(快照|照片|圖片|影像|畫面|snapshot|photo|image|picture)/i.test(text))
-  const imageRequested = captureRequested && /(取得|給我|顯示|傳給我|傳送|提供|附上|查看|最新).{0,12}(快照|照片|圖片|影像|畫面)|(快照|照片|圖片|影像|畫面).{0,12}(給我|顯示|傳給我|傳送|提供|附上|查看)|(?:show|send|get|give).{0,12}(?:snapshot|photo|image|picture)/i.test(text)
+  const captureDenied = /(?:不要|不用|不需|別|禁止|無需).{0,8}(?:取得|拍攝|拍照|拍|擷取|抓取|調閱).{0,8}(?:快照|照片|圖片|影像|畫面)|(?:不要|不用|不需|別|禁止|無需)(?:快照|拍照)|(?:no|without)\s+(?:snapshot|photo|capture)/i.test(text)
+  const analysisDenied = /(?:不要|不用|不需|別|禁止|無需).{0,10}(?:判讀|辨識|分析|描述)|(?:no|without)\s+(?:analysis|vision|description)/i.test(text)
+  const deliveryDenied = /(?:不要|不用|不需|別|禁止|無需).{0,10}(?:顯示|附上|傳送|提供).{0,8}(?:快照|照片|圖片|影像|畫面)|只(?:要|需)?(?:回答|回覆).{0,12}(?:判斷|結果|文字)|(?:no|without)\s+(?:display|attachment|attached|image delivery)/i.test(text)
+  const analysisRequested = !captureDenied && !analysisDenied && /(有人|沒有人|無人|人物|人嗎|看見|看到|看看|看一下|描述|判斷|辨識|分析|什麼|狀況|情況|光線|明亮|昏暗|anyone|person|describe|identify|analy[sz]e|what(?:'s| is)|look|see|lighting)/i.test(text)
+  const captureRequested = !captureDenied && (analysisRequested || /(快照|照片|圖片|影像|畫面|snapshot|photo|image|picture)/i.test(text))
+  const explicitDelivery = /(?:取得|給我|顯示|傳給我|傳送|提供|附上|查看).{0,40}(?:快照|照片|圖片|影像|畫面)|(?:快照|照片|圖片|影像|畫面).{0,20}(?:給我|顯示|傳給我|傳送|提供|附上|查看)|(?:show|send|get|give).{0,30}(?:snapshot|photo|image|picture)/i.test(text)
+  const imageRequested = captureRequested && explicitDelivery && !deliveryDenied
   return { captureRequested, imageRequested, analysisRequested }
 }
 

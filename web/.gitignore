@@ -12,8 +12,18 @@ dist
 dist-ssr
 *.local
 .env
+.env.*
+!.env.example
+*.env
+!*.env.example
 data/
 deploy/caddy-local-root.crt
+deploy/*.key
+deploy/*.pem
+deploy/*.p12
+deploy/*.pfx
+coverage/
+.cache/
 
 # Editor directories and files
 .vscode/*

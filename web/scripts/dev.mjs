@@ -18,4 +18,3 @@ for (const command of commands) {
 
 process.on('SIGINT', () => stop())
 process.on('SIGTERM', () => stop())
-

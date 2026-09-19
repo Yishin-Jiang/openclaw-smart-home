@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "1.0",
+  "source": {
+    "homeAssistant": {
+      "reachable": true,
+      "version": "2026.4.4"
+    },
+    "openClaw": {
+      "reachable": true,
+      "version": "2026.7.1-2"
+    }
+  },
+  "areas": [
+    {
+      "id": "ke_ting",
+      "name": "客廳",
+      "devices": [
+        {
+          "id": "moes-matter-light",
+          "entityId": "light.moes_matter_light",
+          "name": "MOES 智慧燈",
+          "type": "light",
+          "state": "off",
+          "available": true,
+          "controllable": true,
+          "controlPath": "openclaw-ha-mcp",
+          "areaSource": "website_config",
+          "haAreaId": null,
+          "lastUpdated": "2026-09-11T14:17:48.104504+08:00",
+          "stale": false,
+          "note": "HA 尚未指派 area_id。",
+          "energy": null
+        },
+        {
+          "id": "tapo-smart-wifi-plug",
+          "entityId": "switch.smart_wi_fi_plug",
+          "name": "TP-Link Tapo P110M 智慧插座",
+          "type": "outlet",
+          "state": "off",
+          "available": true,
+          "controllable": true,
+          "controlPath": "openclaw-ha-mcp",
+          "areaSource": "website_config",
+          "haAreaId": null,
+          "lastUpdated": "2026-09-11T14:17:48.108974+08:00",
+          "stale": false,
+          "note": "暫選與 switch 相同的 Matter endpoint 1；endpoint 2 不可重複加總。",
+          "energy": {
+            "powerEntityId": "sensor.smart_wi_fi_plug_dian_li_1",
+            "importEnergyEntityId": "sensor.smart_wi_fi_plug_neng_yuan_1",
+            "exportEnergyEntityId": "sensor.smart_wi_fi_plug_dian_li_shu_chu_liang_1",
+            "voltageEntityId": "sensor.smart_wi_fi_plug_you_xiao_dian_ya_1",
+            "currentEntityId": "sensor.smart_wi_fi_plug_you_xiao_dian_liu_1",
+            "todayEntityId": null,
+            "todayDerivedFrom": "sensor.smart_wi_fi_plug_neng_yuan_1"
+          }
+        },
+        {
+          "id": "aqara-g350",
+          "entityId": "camera.aqara_g350",
+          "name": "Aqara G350 攝影機",
+          "type": "camera",
+          "state": "idle",
+          "available": true,
+          "controllable": false,
+          "controlPath": "none",
+          "areaSource": "website_config",
+          "haAreaId": null,
+          "lastUpdated": "2026-09-11T15:57:28.461108+08:00",
+          "stale": false,
+          "note": "狀態查詢為唯讀；快照只能在使用者明確要求後由 OpenClaw skill 取得。",
+          "energy": null
+        },
+        {
+          "id": "living-room-ceiling-light",
+          "entityId": null,
+          "name": "一般天花板燈",
+          "type": "unmanaged",
+          "state": "unknown",
+          "available": false,
+          "controllable": false,
+          "controlPath": "none",
+          "areaSource": "website_config",
+          "haAreaId": null,
+          "lastUpdated": null,
+          "stale": false,
+          "note": "未接入 Home Assistant，不能以 MOES 的狀態推論。",
+          "energy": null
+        }
+      ]
+    },
+    {
+      "id": "chu_fang",
+      "name": "廚房",
+      "devices": []
+    },
+    {
+      "id": "wo_shi",
+      "name": "臥室",
+      "devices": []
+    }
+  ],
+  "scenes": [
+    {
+      "entityId": "scene.yue_du_mo_shi",
+      "name": "閱讀模式",
+      "available": true,
+      "lastActivated": "2026-09-11T00:07:41.356214+08:00"
+    },
+    {
+      "entityId": "scene.ju_yuan_mo_shi",
+      "name": "劇院模式",
+      "available": true,
+      "lastActivated": "2026-09-11T00:42:04.241354+08:00"
+    },
+    {
+      "entityId": "scene.jie_neng_mo_shi",
+      "name": "節能模式",
+      "available": true,
+      "lastActivated": "2026-09-11T14:24:09.085948+08:00"
+    }
+  ],
+  "updatedAt": "2026-09-11T16:02:15+08:00"
+}

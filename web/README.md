@@ -56,17 +56,17 @@ React + TypeScript 前端與 Node.js 後端代理。瀏覽器不會取得 Gatewa
 - Gateway 維持 `127.0.0.1:18789`，不直接對 LAN 公開。
 - Gateway Token 僅存於權限 `0600` 的 VM 後端環境檔。
 - HA Token 由後端讀取既有權限受限的秘密檔，不會傳到瀏覽器。
-- 攝影機僅查詢 Entity 連線狀態；狀態 API 不回傳快照或 `entity_picture`。
+- 攝影機僅查詢 Entity 連線狀態；狀態 API 不回傳快照或 `entity_picture`。G350 的 HA camera Entity 斷線時可能仍維持 `idle`，因此網站每 60 秒建立一次只取 HLS 清單標頭的連線探測並立即取消；連續探測失敗 5 分鐘才標示連線待確認／通知，不讀取或保存影像。
 - 快照回覆不暴露 RTSP、HA Token、VM 檔案路徑或永久公開網址。
 - Node 網站服務只監聽 loopback；LAN 流量由 Caddy 反向代理，不直接暴露 Gateway 或 Node Port。
-- Caddy 在 `https://192.168.0.102:8443` 提供 HTTPS 與 Basic Auth；`http://192.168.0.102:8080` 只負責導向 HTTPS。
+- Caddy 在 `https://<SMART_HOME_HOST>:8443` 提供 HTTPS 與 Basic Auth；對應的 `8080` Port 只負責導向 HTTPS。
 - API 使用明確 Origin allowlist；一般 API 每分鐘最多 120 次，聊天與能耗摘要每分鐘最多 12 次。
 - `openclaw-smart-home-web.service` 與 `openclaw-smart-home-proxy.service` 為永久 user systemd 服務，均已啟用自動恢復。
 
 ## 主動感知
 
 - Node 後端每 15 秒透過既有唯讀 HA API 觀察指定實體；所有通知門檻由固定程式規則判定，不交由模型猜測。
-- 燈與 P110M 連續離線 2 分鐘、攝影機連續離線 5 分鐘才提醒；恢復後需穩定 1 分鐘才發恢復通知。
+- 燈與 P110M 連續離線 2 分鐘才提醒；攝影機串流連線探測連續失敗 5 分鐘才提醒連線待確認；恢復後需穩定 1 分鐘才發恢復通知。
 - 同一離線事件最多提醒 2 次，第二次最快間隔 30 分鐘。重啟狀態保存在權限受限的 `data/monitor-state.json`，避免重複通知。
 - P110M 保持開啟 4 小時時只提醒「持續使用中」，不宣稱設備故障或使用者忘記關閉；功率安全仍由 P110M 本身處理。
 - 規則只喚醒工具白名單為 `GetLiveContext` 與訊息投遞的 `home-monitor` Agent；它不能控制設備或取得攝影機快照。若要操作，使用者仍須另行送出完整明確指令。
@@ -99,6 +99,7 @@ React + TypeScript 前端與 Node.js 後端代理。瀏覽器不會取得 Gatewa
 ## VM 部署與驗收（第九階段）
 
 - 更新部署可在 Windows PowerShell 執行 `./scripts/deploy-vm.ps1`；它會建置、同步檔案、重新載入服務並執行唯讀煙霧測試。
+- 第一次部署前需依 `deploy/README.md` 建立 VM 私密設定；可先執行 `./scripts/deploy-vm.ps1 -ValidateOnly`，只驗證本機輸入與 production build，不連線 VM。
 - Caddy 使用內部 CA 為 LAN IP 簽發憑證。第一次從其他電腦存取前，需將部署時匯出的 `deploy/caddy-local-root.crt` 加入該裝置的受信任根憑證；CA 私鑰只保留在 VM。
 - VM 秘密檔位於 `~/.config/openclaw-smart-home/`，權限為 `0600`；GitHub 只保存 `.env.example` 與不含秘密的部署模板。
 - 固定展示與人工驗收步驟請見 `docs/acceptance-demo.md`。
@@ -106,8 +107,8 @@ React + TypeScript 前端與 Node.js 後端代理。瀏覽器不會取得 Gatewa
 LAN 第一次啟用需在 VM 互動式執行一次：
 
 ```bash
-sudo ufw allow from 192.168.0.0/24 to any port 8443 proto tcp comment 'OpenClaw Smart Home HTTPS'
+sudo ufw allow from <your-lan-cidr> to any port 8443 proto tcp comment 'OpenClaw Smart Home HTTPS'
 sudo ufw status
 ```
 
-只放行區域網路的 HTTPS Port；不需對外開放 Node 的 `4173`、Gateway 的 `18789` 或 HTTP 導向 Port。若 VM 所在 LAN 不是 `192.168.0.0/24`，應先改成實際網段。
+只放行區域網路的 HTTPS Port；不需對外開放 Node 的 `4173`、Gateway 的 `18789` 或 HTTP 導向 Port。請將 `<your-lan-cidr>` 換成實際網段。

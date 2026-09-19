@@ -3,11 +3,11 @@
 	auto_https disable_redirects
 }
 
-http://192.168.0.102:8080 {
-	redir https://192.168.0.102:8443{uri} permanent
+http://{$SMART_HOME_HOST}:8080 {
+	redir https://{$SMART_HOME_HOST}:8443{uri} permanent
 }
 
-https://192.168.0.102:8443 {
+https://{$SMART_HOME_HOST}:8443 {
 	tls internal
 	encode zstd gzip
 

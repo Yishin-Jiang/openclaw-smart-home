@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs'
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
+import { homedir } from 'node:os'
 import { dirname, extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHomeAssistantClient } from './home-assistant.mjs'
@@ -24,7 +25,7 @@ if (!proactiveHookToken && process.env.PROACTIVE_HOOK_TOKEN_FILE) {
     console.error('[proactive-monitor] hook token file is not readable:', error.message)
   }
 }
-const openClawSessionsIndex = process.env.OPENCLAW_SESSIONS_INDEX || '/home/vboxuser/.openclaw/agents/main/sessions/sessions.json'
+const openClawSessionsIndex = process.env.OPENCLAW_SESSIONS_INDEX || join(homedir(), '.openclaw', 'agents', 'main', 'sessions', 'sessions.json')
 let homeAssistantToken = process.env.HOME_ASSISTANT_TOKEN?.trim() || ''
 if (!homeAssistantToken && process.env.HOME_ASSISTANT_TOKEN_FILE) {
   try {
@@ -33,12 +34,16 @@ if (!homeAssistantToken && process.env.HOME_ASSISTANT_TOKEN_FILE) {
     console.error('[home-assistant] token file is not readable:', error.message)
   }
 }
+const cameraProbeIntervalSeconds = Number.parseInt(process.env.CAMERA_PROBE_INTERVAL_SECONDS || '60', 10)
 const homeAssistant = createHomeAssistantClient({
   baseUrl: process.env.HOME_ASSISTANT_URL || '',
   token: homeAssistantToken,
   timeoutMs: Number.parseInt(process.env.HOME_ASSISTANT_TIMEOUT_MS || '6000', 10),
   cacheTtlMs: Number.parseInt(process.env.HOME_STATUS_CACHE_TTL_MS || '15000', 10),
   staleAfterMs: Number.parseInt(process.env.HOME_STATUS_STALE_AFTER_MS || '120000', 10),
+  cameraProbeIntervalMs: cameraProbeIntervalSeconds * 1000,
+  cameraProbeTimeoutMs: Number.parseInt(process.env.CAMERA_PROBE_TIMEOUT_SECONDS || '8', 10) * 1000,
+  cameraProbeOfflineMs: Number.parseInt(process.env.PROACTIVE_CAMERA_OFFLINE_SECONDS || '300', 10) * 1000,
   domains: (process.env.HOME_ENTITY_DOMAINS || 'light,switch,camera').split(',').map((value) => value.trim()).filter(Boolean),
 })
 const energyClient = createEnergyClient({
@@ -62,8 +67,9 @@ const generalRateLimit = Number.parseInt(process.env.API_RATE_LIMIT_PER_MINUTE |
 const actionRateLimit = Number.parseInt(process.env.ACTION_RATE_LIMIT_PER_MINUTE || '12', 10)
 const sessionPattern = /^[a-f0-9-]{20,64}$/i
 const executionProtocol = [
-  'For Home Assistant control requests, execute tools sequentially:',
-  'first call GetLiveContext and wait for its result, then call the required HA control tool and wait for its result, then call GetLiveContext again to verify.',
+  'MANDATORY SAFETY PROTOCOL: For every Home Assistant control request, use tools sequentially.',
+  'Your first tool call must be GetLiveContext unless the system message already contains a verified website read-only Home Assistant snapshot for this exact request. Then call the required HA control tool and wait for its result, and finally call GetLiveContext again to verify.',
+  'Even when a device appears not to exist or prior conversation contains state, use the current verified snapshot or call GetLiveContext before reaching a conclusion.',
   'Never claim completion when a control tool fails or the final verification is missing or contradicts the request.',
   'For read-only questions, use GetLiveContext when current HA state is needed.',
 ].join(' ')
@@ -71,7 +77,7 @@ const snapshotStore = createSnapshotStore({
   directory: process.env.SNAPSHOT_DATA_DIR || join(projectRoot, 'data', 'snapshots'),
   signingSecret: process.env.SNAPSHOT_SIGNING_SECRET || '',
   ttlSeconds: Number.parseInt(process.env.SNAPSHOT_TTL_SECONDS || '120', 10),
-  allowedSourceDirectory: process.env.CAMERA_SNAPSHOT_SOURCE_DIR || '/home/vboxuser/.openclaw/workspace/skills/ha-camera-snapshot/cache',
+  allowedSourceDirectory: process.env.CAMERA_SNAPSHOT_SOURCE_DIR || join(homedir(), '.openclaw', 'workspace', 'skills', 'ha-camera-snapshot', 'cache'),
 })
 const memoryStore = createMemoryStore({
   directory: resolve(process.env.MEMORY_DATA_DIR || join(projectRoot, 'data', 'memory')),
@@ -92,6 +98,7 @@ const proactiveMonitor = createProactiveMonitor({
     camera: Number.parseInt(process.env.PROACTIVE_CAMERA_OFFLINE_SECONDS || '300', 10),
   },
   recoverySeconds: Number.parseInt(process.env.PROACTIVE_RECOVERY_SECONDS || '60', 10),
+  cameraProbeIntervalSeconds,
   longRunningSeconds: Number.parseInt(process.env.PROACTIVE_LONG_RUNNING_SECONDS || '14400', 10),
   repeatSeconds: Number.parseInt(process.env.PROACTIVE_REPEAT_SECONDS || '1800', 10),
   maxAlertsPerIncident: Number.parseInt(process.env.PROACTIVE_MAX_ALERTS_PER_INCIDENT || '2', 10),
@@ -247,6 +254,43 @@ function extractMessageContent(payload) {
   return content.map((part) => typeof part === 'string' ? part : part?.text || '').join('').trim()
 }
 
+function isHomeRelatedRequest(message) {
+  return /home assistant|智慧家庭|設備|燈|照明|插座|p110|plug|攝影機|相機|快照|場景|情境|模式|開啟|打開|關閉|狀態|在線|離線/iu.test(message)
+}
+
+function isDeviceInventoryRequest(message) {
+  return /(?:哪些|所有|列出|目前).{0,16}(?:設備).{0,16}(?:在線|線上|可用|狀態)|(?:設備).{0,16}(?:有哪些|清單|列表|在線|線上)/iu.test(message)
+}
+
+function compactHomeSnapshot(snapshot) {
+  return {
+    updatedAt: snapshot.updatedAt,
+    stale: snapshot.stale,
+    devices: snapshot.areas.flatMap((area) => area.devices.map((device) => ({
+      entityId: device.entityId,
+      name: device.name,
+      area: area.name,
+      kind: device.kind,
+      status: device.status,
+      statusLabel: device.statusLabel,
+      available: device.available,
+      lastUpdated: device.lastUpdated,
+    }))),
+  }
+}
+
+function renderDeviceInventory(snapshot) {
+  const kinds = { light: '燈具', outlet: '智慧插座', camera: '攝影機' }
+  const online = snapshot.devices.filter((device) => device.available && !['offline', 'unknown'].includes(device.status))
+  if (!online.length) return '目前沒有查到在線的 Home Assistant 設備。'
+  const lines = online.map((device) => {
+    const area = device.area && device.area !== '未分區' ? device.area : '未分區'
+    const kind = kinds[device.kind] || device.kind
+    return `- **${device.name}**（${area}／${kind}）：${device.statusLabel || device.status}`
+  })
+  return `目前在線的設備：\n\n${lines.join('\n')}`
+}
+
 async function createEnergyInsight(period) {
   if (!gatewayToken) throw new Error('OpenClaw Gateway Token is not configured')
   const energy = await energyClient.getEnergy()
@@ -354,6 +398,15 @@ async function streamChat(request, response) {
     if (!response.destroyed) sendSse(response, 'flow', event)
     return event
   }
+  let verifiedHomeSnapshot = null
+  if (isHomeRelatedRequest(message)) {
+    try {
+      verifiedHomeSnapshot = compactHomeSnapshot(await homeAssistant.getStatus())
+      emitFlow('context', 'success', 'Home Assistant 唯讀狀態', '網站後端已取得目前設備與攝影機連線狀態')
+    } catch {
+      emitFlow('context', 'failed', 'Home Assistant 唯讀狀態', '網站後端暫時無法取得即時狀態，OpenClaw 必須改用 GetLiveContext 查證')
+    }
+  }
   const observer = createOpenClawObserver({
     sessionId,
     startedAt: Date.now(),
@@ -361,6 +414,7 @@ async function streamChat(request, response) {
     emit: emitFlow,
     requireAttachment: cameraPolicy.imageRequested,
     requireVision: cameraPolicy.analysisRequested,
+    externalContextAvailable: Boolean(verifiedHomeSnapshot),
     onSnapshot: cameraPolicy.imageRequested
       ? (sourcePath) => snapshotStore.importSnapshot(sourcePath, sessionId, Date.now())
       : undefined,
@@ -389,7 +443,7 @@ async function streamChat(request, response) {
         user: `web:${sessionId}`,
         stream: true,
         messages: [
-          { role: 'system', content: `${executionProtocol} Memory is managed by the website. Never write USER.md, MEMORY.md, or memory files. A preference is not permission to control a device or access a camera. ${preferenceCandidate ? `The website created a pending preference candidate: "${preferenceCandidate.statement}". Tell the user to review and confirm the website memory card; do not treat it as active yet.` : ''} ${preferencesPrompt} ${cameraPolicy.captureRequested
+          { role: 'system', content: `${executionProtocol} ${verifiedHomeSnapshot ? `Verified website read-only Home Assistant snapshot for this request: ${JSON.stringify(verifiedHomeSnapshot)}. Camera entities may be omitted from MCP Live Context; never infer that a camera is offline merely because it is absent there. Use this verified snapshot for camera connectivity and device-list answers. This snapshot is read-only context, not permission to control anything.` : ''} Memory is managed by the website. Never write USER.md, MEMORY.md, or memory files. A preference is not permission to control a device or access a camera. ${preferenceCandidate ? `The website created a pending preference candidate: "${preferenceCandidate.statement}". Tell the user to review and confirm the website memory card; do not treat it as active yet.` : ''} ${preferencesPrompt} ${cameraPolicy.captureRequested
             ? `The user explicitly authorized one fresh camera capture for this request. Use the ha-camera-snapshot skill. ${cameraPolicy.analysisRequested ? 'Analyze the fresh snapshot with the image tool and answer only from that result.' : 'The user only requested the snapshot; do not run image analysis.'} ${cameraPolicy.imageRequested ? 'They explicitly requested to receive the image; retain it through response delivery and include it as instructed by the skill.' : 'They did not request delivery of the image.'}`
             : 'The user did not authorize a camera capture. For camera connectivity questions use metadata only and never capture an image.'}` },
           { role: 'user', content: message },
@@ -447,6 +501,10 @@ async function streamChat(request, response) {
       assistantText = cameraPolicy.captureRequested
         ? '攝影機快照已取得，但 OpenClaw 沒有完成使用者要求的影像判讀，因此目前無法回答畫面內容。'
         : '設備操作已送出，但 OpenClaw 沒有完成事後狀態驗證，因此目前不能確認操作已成功。'
+    } else if (observed.missingPreActionContext) {
+      assistantText = '設備操作前未取得 Home Assistant 即時狀態，因此這次流程不符合安全規則，不能回報為成功。'
+    } else if (verifiedHomeSnapshot && isDeviceInventoryRequest(message) && !cameraPolicy.captureRequested) {
+      assistantText = renderDeviceInventory(verifiedHomeSnapshot)
     }
 
     const assistantMessage = { id: randomUUID(), role: 'assistant', text: assistantText, attachments: observed.attachments, createdAt: now() }

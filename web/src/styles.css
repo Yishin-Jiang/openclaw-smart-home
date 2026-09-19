@@ -224,6 +224,12 @@ h1, h2, h3, strong { color: var(--text); }
 .composer textarea { width: 100%; min-height: 64px; resize: vertical; color: var(--text); background: transparent; border: 0; outline: 0; font-size: .84rem; line-height: 1.6; }
 .composer textarea::placeholder { color: #7f9499; }
 .composer__actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.composer__review-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 8px; }
+.composer__review-heading strong { font-size: .82rem; }
+.composer__review-heading small { color: var(--muted); font-size: .68rem; }
+.composer__review-heading .icon-button { margin-left: auto; }
+.composer__box--review textarea { min-height: 74px; padding: 11px 12px; border: 1px solid #355b54; border-radius: 9px; background: #0b181c; font-size: .82rem; line-height: 1.55; }
+.composer__box--review textarea:focus { border-color: var(--accent); }
 .icon-button { display: inline-grid; place-items: center; padding: 7px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; }
 .icon-button:disabled { cursor: not-allowed; opacity: .38; }
 .mic-button { color: var(--muted); }
@@ -238,9 +244,6 @@ h1, h2, h3, strong { color: var(--text); }
 .voice-panel__heading small { color: var(--muted); font-size: .68rem; }
 .voice-panel__heading > button:last-child { margin-left: auto; }
 .voice-panel > p { margin: 12px 0 0; color: #c8d6d7; font-size: .82rem; line-height: 1.55; }
-.voice-panel > label { display: block; margin: 14px 0 7px; color: var(--muted); font-size: .7rem; }
-.voice-panel textarea { width: 100%; min-height: 74px; padding: 11px 12px; resize: vertical; color: var(--text); border: 1px solid #355b54; border-radius: 9px; outline: 0; background: #0b181c; font-size: .82rem; line-height: 1.55; }
-.voice-panel textarea:focus { border-color: var(--accent); }
 .voice-panel__actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 12px; }
 .voice-panel--listening { border-color: rgba(101, 226, 191, .42); }
 .voice-panel--error { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-color: rgba(255, 130, 122, .42); }

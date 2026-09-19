@@ -548,16 +548,38 @@ function ConversationPanel({ onFlowChange }: { onFlowChange: Dispatch<SetStateAc
           {error && <div className="conversation-error" role="alert">{error}</div>}
         </div>
         <form className="composer" onSubmit={submit}>
-          <div className="composer__box">
+          <div className={`composer__box ${voiceMode === 'review' ? 'composer__box--review' : ''}`}>
+            {voiceMode === 'review' && (
+              <div className="composer__review-heading">
+                <strong>確認辨識文字</strong>
+                <small>可直接修改；確認後才會交給 OpenClaw</small>
+                <button type="button" className="icon-button" onClick={cancelVoice} aria-label="取消語音輸入"><X size={17} /></button>
+              </div>
+            )}
             <textarea
               id="chat-input"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="用自然語言描述你想做的事…"
+              value={voiceMode === 'review' ? voiceTranscript : draft}
+              onChange={(event) => {
+                if (voiceMode === 'review') {
+                  setVoiceTranscript(event.target.value)
+                  voiceTranscriptRef.current = event.target.value
+                } else {
+                  setDraft(event.target.value)
+                }
+              }}
+              placeholder={voiceMode === 'review' ? '請確認或修改辨識文字…' : '用自然語言描述你想做的事…'}
               rows={3}
+              autoFocus={voiceMode === 'review'}
             />
             <div className="composer__actions">
-              {voiceMode === 'listening' || voiceMode === 'stopping' ? (
+              {voiceMode === 'review' ? (
+                <>
+                  <button type="button" className="text-button" onClick={startVoice}><Mic size={15} /> 重新錄音</button>
+                  <button type="button" className="send-button" onClick={confirmVoice} disabled={!voiceTranscript.trim() || responding}>
+                    確認並送出 <Send size={16} />
+                  </button>
+                </>
+              ) : voiceMode === 'listening' || voiceMode === 'stopping' ? (
                 <button
                   type="button"
                   className="icon-button mic-button is-recording"
@@ -593,31 +615,6 @@ function ConversationPanel({ onFlowChange }: { onFlowChange: Dispatch<SetStateAc
                 <button type="button" className="text-button" onClick={cancelVoice}>取消</button>
               </div>
               <p>{voiceTranscript || '開始說話…'}</p>
-            </div>
-          )}
-          {voiceMode === 'review' && (
-            <div className="voice-panel voice-panel--review">
-              <div className="voice-panel__heading">
-                <div><strong>確認辨識文字</strong><small>可修改內容；確認後才會交給 OpenClaw</small></div>
-                <button type="button" className="icon-button" onClick={cancelVoice} aria-label="取消語音輸入"><X size={17} /></button>
-              </div>
-              <label htmlFor="voice-transcript">語音辨識結果</label>
-              <textarea
-                id="voice-transcript"
-                value={voiceTranscript}
-                onChange={(event) => {
-                  setVoiceTranscript(event.target.value)
-                  voiceTranscriptRef.current = event.target.value
-                }}
-                rows={3}
-                autoFocus
-              />
-              <div className="voice-panel__actions">
-                <button type="button" className="text-button" onClick={startVoice}><Mic size={15} /> 重新錄音</button>
-                <button type="button" className="send-button" onClick={confirmVoice} disabled={!voiceTranscript.trim() || responding}>
-                  確認並送出 <Send size={16} />
-                </button>
-              </div>
             </div>
           )}
           {voiceMode === 'error' && (
